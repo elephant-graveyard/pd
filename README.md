@@ -8,3 +8,15 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/homeport/pd)
 
 /pe.de/ - command line tool to query PagerDuty for the current on-calls
+
+## Setup
+
+Install the `pd` binary via `brew` on macOS, or find the respective binary of the [latest release](https://github.com/homeport/pd/releases/latest).
+
+```sh
+brew install homeport/tap/pd
+```
+
+Create a `.pd.yml` file in your home directory that contains a PagerDuty authentication token. Go to your PagerDuty profile settings and under "User Settings" you will find a `Create API User Token` button.
+
+![pd-yaml-example](.docs/images/pd-yaml.png?raw=true "Example of the PagerDuty config file")
