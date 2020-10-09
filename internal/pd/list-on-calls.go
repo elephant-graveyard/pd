@@ -65,7 +65,9 @@ func GetPagerDutyOnCalls(client *pagerduty.Client) (map[TimeRange]map[string]pag
 	}
 
 	var oncalls = map[TimeRange]map[string]pagerduty.EscalationPolicy{}
-	for _, oncall := range list.OnCalls {
+	for i := range list.OnCalls {
+		oncall := list.OnCalls[i]
+
 		start, err := parsePagerDutyTime(oncall.Start)
 		if err != nil {
 			return nil, err
