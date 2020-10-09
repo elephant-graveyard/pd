@@ -21,12 +21,13 @@
 package pd
 
 import (
+	"io/ioutil"
 	"path/filepath"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
-	"github.com/gonvenience/ytbx"
 	"github.com/mitchellh/go-homedir"
+	"gopkg.in/yaml.v3"
 )
 
 // TimeRange specifies a time range
@@ -38,12 +39,12 @@ type TimeRange struct {
 // CreatePagerDutyClient creates a new PagerDuty client based on the access
 // token stored in the ~/.pd.yml file
 func CreatePagerDutyClient() (*pagerduty.Client, error) {
-	authtoken, err := lookUpAuthTokenFromPagerDutyYAML()
+	config, err := loadConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return pagerduty.NewClient(authtoken), nil
+	return pagerduty.NewClient(config.Authtoken), nil
 }
 
 // GetPagerDutyOnCalls returns all on-calls for the current user
@@ -88,23 +89,23 @@ func GetPagerDutyOnCalls(client *pagerduty.Client) (map[TimeRange]map[string]pag
 	return oncalls, nil
 }
 
-func lookUpAuthTokenFromPagerDutyYAML() (string, error) {
+func loadConfig() (*Config, error) {
 	home, err := homedir.Dir()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	file, err := ytbx.LoadFile(filepath.Join(home, ".pd.yml"))
+	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	node, err := ytbx.Grab(file.Documents[0], "/authtoken")
-	if err != nil {
-		return "", err
+	var config Config
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, err
 	}
 
-	return node.Value, nil
+	return &config, nil
 }
 
 func parsePagerDutyTime(input string) (time.Time, error) {
