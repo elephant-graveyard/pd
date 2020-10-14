@@ -18,17 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package pd
+package cmd
 
-// Tip: Check https://yaml.to-go.online/ or https://mholt.github.io/json-to-go/
-// for an easy way to translate YAML or JSON files into Go struct code.
+import (
+	"github.com/gonvenience/bunt"
+	"github.com/homeport/pd/internal/pd"
+	"github.com/spf13/cobra"
+)
 
-// Config describes the pd tool configuration structure
-type Config struct {
-	Authtoken  string `yaml:"authtoken"`
-	ShiftTimes []struct {
-		Name  string `yaml:"name"`
-		Start string `yaml:"start"`
-		End   string `yaml:"end"`
-	} `yaml:"shift-times"`
+// currentShiftCmd represents the get command
+var currentShiftCmd = &cobra.Command{
+	Use:   "current-shift",
+	Args:  cobra.ExactArgs(0),
+	Short: "Display current shift",
+	Long:  `Displays the region of the current shift`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+
+		shifts, shiftPos, err := pd.GetCurrentShift()
+		if err != nil || shiftPos == -1 {
+			return err
+		}
+		bunt.Printf("\nAt the moment, SkyBlue{%s} is in charge.\n", shifts[shiftPos].Name)
+
+		nextShift, timeUntilNextShift, err := pd.GetNextShift(shifts, shiftPos)
+		if err != nil {
+			return err
+		}
+		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
+
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(currentShiftCmd)
 }
