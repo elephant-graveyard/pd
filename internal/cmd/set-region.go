@@ -21,47 +21,61 @@
 package cmd
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gonvenience/bunt"
 	"github.com/homeport/pd/internal/pd"
 	"github.com/spf13/cobra"
 )
 
-// currentShiftCmd represents the get command
-var currentShiftCmd = &cobra.Command{
-	Use:   "current-shift",
-	Args:  cobra.ExactArgs(0),
-	Short: "Display current shift",
-	Long:  `Displays the region of the current shift`,
+// setRegionCmd represents the get command
+var setRegionCmd = &cobra.Command{
+	Use:   "set-region",
+	Args:  cobra.MaximumNArgs(1),
+	Short: "Sets own region",
+	Long:  `Sets the region you live in`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		shifts, shiftPos, ownShiftPos, err := pd.GetCurrentAndOwnShift()
-		if err != nil || shiftPos == -1 {
-			return err
-		}
-		bunt.Printf("\nAt the moment, SkyBlue{%s} is in charge.\n", shifts[shiftPos].Name)
-
-		nextShiftPos := (shiftPos + 1) % len(shifts)
-		nextShift := shifts[nextShiftPos]
-		timeUntilNextShift, err := pd.GetTimeUntilShift(shifts, shiftPos+1)
+		shifts, _, err := pd.LoadShifts()
 		if err != nil {
 			return err
 		}
-		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
 
-		if ownShiftPos == -1 {
-			bunt.Println("Your region has not been set yet. Please run the 'LightSlateGray{pd set-region [region-name]}' command\n")
-			return nil
-		}
-
-		if ownShiftPos != shiftPos && ownShiftPos != nextShiftPos {
-			timeUntilOwnShift, err := pd.GetTimeUntilShift(shifts, ownShiftPos)
+		if len(args) == 0 {
+			ownShift, err := pd.GetProbablyOwnShift()
+			if err != nil || ownShift.Name == "" {
+				return err
+			}
+			err = pd.ChangeYAMLFile("own-shift", ownShift.Name)
 			if err != nil {
 				return err
 			}
-			ownShift := shifts[ownShiftPos]
-			bunt.Printf("SkyBlue{%s} will have the next shift in %d:%02d hours\n\n", ownShift.Name, timeUntilOwnShift/60, timeUntilOwnShift%60)
+			bunt.Printf("\nYou've been added to SkyBlue{%s} because of your timezone.\n", ownShift.Name)
+			bunt.Printf("If this is not the right region, please run the 'LightSlateGray{set-region}' command followed by your region name.\n\n")
 		} else {
-			bunt.Println("")
+			pos := -1
+			for i, shift := range shifts {
+				if shift.Name[5:] == args[0] {
+					pos = i
+				}
+			}
+			if pos == -1 {
+				shiftNames := []string{}
+				for i, shift := range shifts {
+					shiftNames = append(shiftNames, shift.Name[5:])
+					if i != len(shifts)-1 {
+						shiftNames[i] += " /"
+					}
+				}
+				bunt.Printf("\nYour input was invalid. Please run the 'LightSlateGray{set-region}' command followed by one of these:  %s\n\n", strings.Trim(fmt.Sprint(shiftNames), "[]"))
+				return nil
+			}
+			err := pd.ChangeYAMLFile("own-shift", shifts[pos].Name)
+			if err != nil {
+				return err
+			}
+			bunt.Printf("\nYou've been added to SkyBlue{%s}\n\n", shifts[pos].Name)
 		}
 
 		return nil
@@ -69,5 +83,5 @@ var currentShiftCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(currentShiftCmd)
+	rootCmd.AddCommand(setRegionCmd)
 }
