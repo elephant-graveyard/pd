@@ -30,10 +30,14 @@ import (
 
 // Shift specifies time range and name of a shift, start and end times are saved in minutes since midnight
 type Shift struct {
-	Start int
-	End   int
+	Start ShiftTime
+	End   ShiftTime
 	Name  string
 }
+
+// ShiftTime stores the amount of minutes that passed since midnight or the length of a time period in minutes
+//  3:30 am would be stored as 210 (3 * 60 + 30) and a time period of 6:15 h would be stored as 375 (6 * 60 + 15)
+type ShiftTime int
 
 // GetProbablyOwnShift returns the shift the user probably belongs to because of their time zone
 func GetProbablyOwnShift() (Shift, error) {
@@ -58,18 +62,18 @@ func GetProbablyOwnShift() (Shift, error) {
 	}
 	timeOffset += minutes
 
-	var middayInUTC int
+	var middayInUTC ShiftTime
 	if timeOffsetString[0] == '+' {
-		middayInUTC = (36*60 - timeOffset) % (24 * 60)
+		middayInUTC = ShiftTime((36*60 - timeOffset) % (24 * 60))
 	} else {
-		middayInUTC = (12*60 + timeOffset) % (24 * 60)
+		middayInUTC = ShiftTime((12*60 + timeOffset) % (24 * 60))
 	}
 
 	return GetShiftByTime(middayInUTC)
 }
 
 // GetShiftByTime returns the shift which is active at a specific time
-func GetShiftByTime(time int) (Shift, error) {
+func GetShiftByTime(time ShiftTime) (Shift, error) {
 
 	shifts, _, err := LoadShifts()
 	if err != nil {
@@ -93,10 +97,10 @@ func GetShiftByTime(time int) (Shift, error) {
 }
 
 // GetTimeUntilShift returns information about the next shift and time until it starts
-func GetTimeUntilShift(shifts []Shift, shiftPos int) (int, error) {
+func GetTimeUntilShift(shifts []Shift, shiftPos int) (ShiftTime, error) {
 
 	timeInUTC := time.Now().UTC()
-	currentTime := timeInUTC.Hour()*60 + timeInUTC.Minute()
+	currentTime := ShiftTime(timeInUTC.Hour()*60 + timeInUTC.Minute())
 
 	nextShift := shifts[shiftPos%len(shifts)]
 
@@ -109,10 +113,10 @@ func GetTimeUntilShift(shifts []Shift, shiftPos int) (int, error) {
 }
 
 // GetCurrentAndOwnShift returns all shifts in a slice and the position of the current shift
-func GetCurrentAndOwnShift() ([]Shift, int, int, error) {
+func GetCurrentAndOwnShift() ([]Shift, int, int, error) { // first int is the position of current-shift in []Shift and second int is the position of own-shift
 
 	timeInUTC := time.Now().UTC()
-	currentTime := timeInUTC.Hour()*60 + timeInUTC.Minute()
+	currentTime := ShiftTime(timeInUTC.Hour()*60 + timeInUTC.Minute())
 
 	shifts, ownShiftName, err := LoadShifts()
 	if err != nil {
@@ -149,29 +153,31 @@ func LoadShifts() ([]Shift, string, error) {
 	}
 
 	finalShifts := make([]Shift, len(config.ShiftTimes))
-	var min int
-	for i, shift := range config.ShiftTimes {
-		finalShifts[i] = Shift{}
-		finalShifts[i].Start, err = strconv.Atoi(shift.Start[:2])
+
+	stringToTime := func(str string) (ShiftTime, error) {
+		hours, err := strconv.Atoi(str[:2])
 		if err != nil {
-			return nil, "", err
+			return 0, err
 		}
-		finalShifts[i].Start *= 60
-		min, err = strconv.Atoi(shift.Start[3:])
+		mins, err := strconv.Atoi(str[3:])
+		if err != nil {
+			return 0, err
+		}
+		return ShiftTime(hours*60 + mins), nil
+	}
+
+	for i, shift := range config.ShiftTimes {
+
+		finalShifts[i] = Shift{}
+		finalShifts[i].Start, err = stringToTime(shift.Start)
 		if err != nil {
 			return nil, "", err
 		}
 
-		finalShifts[i].End, err = strconv.Atoi(shift.End[:2])
+		finalShifts[i].End, err = stringToTime(shift.End)
 		if err != nil {
 			return nil, "", err
 		}
-		finalShifts[i].End *= 60
-		min, err = strconv.Atoi(shift.End[3:])
-		if err != nil {
-			return nil, "", err
-		}
-		finalShifts[i].End += min
 		finalShifts[i].Name = shift.Name
 	}
 

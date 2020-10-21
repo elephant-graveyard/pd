@@ -29,9 +29,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const cmdName string = "set-region"
+
 // setRegionCmd represents the get command
 var setRegionCmd = &cobra.Command{
-	Use:   "set-region",
+	Use:   cmdName,
 	Args:  cobra.MaximumNArgs(1),
 	Short: "Sets own region",
 	Long:  `Sets the region you live in`,
@@ -52,11 +54,11 @@ var setRegionCmd = &cobra.Command{
 				return err
 			}
 			bunt.Printf("\nYou've been added to SkyBlue{%s} because of your timezone.\n", ownShift.Name)
-			bunt.Printf("If this is not the right region, please run the 'LightSlateGray{set-region}' command followed by your region name.\n\n")
+			bunt.Printf("If this is not the right region, please run the 'LightSlateGray{%s}' command followed by your region name.\n\n", cmdName)
 		} else {
 			pos := -1
 			for i, shift := range shifts {
-				if shift.Name[5:] == args[0] {
+				if shift.Name[5:] == args[0] || shift.Name == args[0] {
 					pos = i
 				}
 			}
@@ -68,7 +70,7 @@ var setRegionCmd = &cobra.Command{
 						shiftNames[i] += " /"
 					}
 				}
-				bunt.Printf("\nYour input was invalid. Please run the 'LightSlateGray{set-region}' command followed by one of these:  %s\n\n", strings.Trim(fmt.Sprint(shiftNames), "[]"))
+				bunt.Printf("\nYour input was invalid. Please run the 'LightSlateGray{%s}' command followed by one of these:  %s\n\n", cmdName, strings.Trim(fmt.Sprint(shiftNames), "[]"))
 				return nil
 			}
 			err := pd.ChangeYAMLFile("own-shift", shifts[pos].Name)
