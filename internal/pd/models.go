@@ -42,7 +42,7 @@ type Config struct {
 	} `yaml:"shift-times"`
 }
 
-//ChangeYAMLFile changes a specific value in the .pd.yml file
+// ChangeYAMLFile changes a specific value in the .pd.yml file
 func ChangeYAMLFile(name string, newValue string) error {
 
 	home, err := homedir.Dir()
@@ -57,7 +57,7 @@ func ChangeYAMLFile(name string, newValue string) error {
 
 	config := make(map[interface{}]interface{})
 	err = yaml.Unmarshal(data, &config)
-	config["own-shift"] = newValue
+	config[name] = newValue
 
 	d, err := yaml.Marshal(&config)
 	if err != nil {

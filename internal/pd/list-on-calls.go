@@ -92,12 +92,8 @@ func GetPagerDutyOnCalls(client *pagerduty.Client) (map[TimeRange]map[string]pag
 }
 
 func loadConfig() (*Config, error) {
-	home, err := homedir.Dir()
-	if err != nil {
-		return nil, err
-	}
 
-	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
+	data, err := getDataFromYAMLFile()
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +104,19 @@ func loadConfig() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func getDataFromYAMLFile() ([]byte, error) {
+	home, err := homedir.Dir()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func parsePagerDutyTime(input string) (time.Time, error) {

@@ -36,7 +36,7 @@ type Shift struct {
 }
 
 // ShiftTime stores the amount of minutes that passed since midnight or the length of a time period in minutes
-//  3:30 am would be stored as 210 (3 * 60 + 30) and a time period of 6:15 h would be stored as 375 (6 * 60 + 15)
+// 3:30 am would be stored as 210 (3 * 60 + 30) and a time period of 6:15 h would be stored as 375 (6 * 60 + 15)
 type ShiftTime int
 
 // GetProbablyOwnShift returns the shift the user probably belongs to because of their time zone
@@ -112,8 +112,9 @@ func GetTimeUntilShift(shifts []Shift, shiftPos int) (ShiftTime, error) {
 	return timeUntilNextShift, nil
 }
 
-// GetCurrentAndOwnShift returns all shifts in a slice and the position of the current shift
-func GetCurrentAndOwnShift() ([]Shift, int, int, error) { // first int is the position of current-shift in []Shift and second int is the position of own-shift
+// GetCurrentAndOwnShift returns all shifts in a slice, the position of the current shift, and
+// the position of your own-shift, or an error otherwise
+func GetCurrentAndOwnShift() ([]Shift, int, int, error) {
 
 	timeInUTC := time.Now().UTC()
 	currentTime := ShiftTime(timeInUTC.Hour()*60 + timeInUTC.Minute())

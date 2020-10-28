@@ -49,7 +49,7 @@ var currentShiftCmd = &cobra.Command{
 		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
 
 		if ownShiftPos == -1 {
-			bunt.Printf("Your region has not been set yet. Please run the 'LightSlateGray{pd %s [region-name]}' command\n\n", cmdName)
+			bunt.Printf("\nYour region has not been set yet. In case you want to set it in the configuration, please run the 'LightSlateGray{pd %s [region-name]}'\n\n", cmdName)
 			return nil
 		}
 
