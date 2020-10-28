@@ -47,20 +47,10 @@ func CreatePagerDutyClient() (*pagerduty.Client, error) {
 	return pagerduty.NewClient(config.Authtoken), nil
 }
 
-// GetPagerDutyOnCalls returns all on-calls for the current user
-func GetPagerDutyOnCalls(client *pagerduty.Client) (map[TimeRange]map[string]pagerduty.EscalationPolicy, error) {
-	user, err := client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
-	if err != nil {
-		return nil, err
-	}
+// GetPagerDutyOnCalls returns all currently active on-calls for the user
+func GetPagerDutyOnCalls(client *pagerduty.Client, user *pagerduty.User) (map[TimeRange]map[string]pagerduty.EscalationPolicy, error) {
 
-	listOptions := pagerduty.ListOnCallOptions{
-		APIListObject: pagerduty.APIListObject{Limit: 100},
-		UserIDs:       []string{user.ID},
-		Earliest:      true,
-	}
-
-	list, err := client.ListOnCalls(listOptions)
+	list, err := GetAllOnCalls(client, user, "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +79,21 @@ func GetPagerDutyOnCalls(client *pagerduty.Client) (map[TimeRange]map[string]pag
 	}
 
 	return oncalls, nil
+}
+
+// GetAllOnCalls returns all on calls for a specified user in a specified time range
+// If time range is not specified, only currently active on-calls will be returned
+func GetAllOnCalls(client *pagerduty.Client, user *pagerduty.User, start string, end string) (*pagerduty.ListOnCallsResponse, error) {
+
+	listOptions := pagerduty.ListOnCallOptions{
+		APIListObject: pagerduty.APIListObject{Limit: 100},
+		UserIDs:       []string{user.ID},
+		Since:         start,
+		Until:         end,
+		Earliest:      true,
+	}
+
+	return client.ListOnCalls(listOptions)
 }
 
 func loadConfig() (*Config, error) {
