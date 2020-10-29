@@ -34,17 +34,35 @@ var currentShiftCmd = &cobra.Command{
 	Long:  `Displays the region of the current shift`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		shifts, shiftPos, err := pd.GetCurrentShift()
+		shifts, shiftPos, ownShiftPos, err := pd.GetCurrentAndOwnShift()
 		if err != nil || shiftPos == -1 {
 			return err
 		}
 		bunt.Printf("\nAt the moment, SkyBlue{%s} is in charge.\n", shifts[shiftPos].Name)
 
-		nextShift, timeUntilNextShift, err := pd.GetNextShift(shifts, shiftPos)
+		nextShiftPos := (shiftPos + 1) % len(shifts)
+		nextShift := shifts[nextShiftPos]
+		timeUntilNextShift, err := pd.GetTimeUntilShift(shifts, shiftPos+1)
 		if err != nil {
 			return err
 		}
-		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
+		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
+
+		if ownShiftPos == -1 {
+			bunt.Printf("\nYour region has not been set yet. In case you want to set it in the configuration, please run the 'LightSlateGray{pd %s [region-name]}'\n\n", cmdName)
+			return nil
+		}
+
+		if ownShiftPos != shiftPos && ownShiftPos != nextShiftPos {
+			timeUntilOwnShift, err := pd.GetTimeUntilShift(shifts, ownShiftPos)
+			if err != nil {
+				return err
+			}
+			ownShift := shifts[ownShiftPos]
+			bunt.Printf("SkyBlue{%s} will have the next shift in %d:%02d hours\n\n", ownShift.Name, timeUntilOwnShift/60, timeUntilOwnShift%60)
+		} else {
+			bunt.Println("")
+		}
 
 		return nil
 	},

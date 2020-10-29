@@ -20,15 +20,54 @@
 
 package pd
 
+import (
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/mitchellh/go-homedir"
+	"gopkg.in/yaml.v3"
+)
+
 // Tip: Check https://yaml.to-go.online/ or https://mholt.github.io/json-to-go/
 // for an easy way to translate YAML or JSON files into Go struct code.
 
 // Config describes the pd tool configuration structure
 type Config struct {
 	Authtoken  string `yaml:"authtoken"`
+	OwnShift   string `yaml:"own-shift"`
 	ShiftTimes []struct {
 		Name  string `yaml:"name"`
 		Start string `yaml:"start"`
 		End   string `yaml:"end"`
 	} `yaml:"shift-times"`
+}
+
+// ChangeYAMLFile changes a specific value in the .pd.yml file
+func ChangeYAMLFile(name string, newValue string) error {
+
+	home, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
+
+	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
+	if err != nil {
+		return err
+	}
+
+	config := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &config)
+	config[name] = newValue
+
+	d, err := yaml.Marshal(&config)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(filepath.Join(home, ".pd.yml"), d, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
