@@ -30,6 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var listAlertsCmdSettings struct {
+	id   string
+	from string
+	to   string
+}
+
 // currentShiftCmd represents the get command
 var listAlertsCmd = &cobra.Command{
 	Use:   "list-alerts",
@@ -43,43 +49,27 @@ var listAlertsCmd = &cobra.Command{
 			return err
 		}
 
-		id, err := cmd.Flags().GetString("id")
-		if err != nil {
-			return err
-		}
 		var user *pagerduty.User
-		if id == "" {
+		if listAlertsCmdSettings.id == "" {
 			user, err = client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
 			if err != nil {
 				return err
 			}
-			id = user.ID
 		} else {
-			user, err = client.GetUser(id, pagerduty.GetUserOptions{})
+			user, err = client.GetUser(listAlertsCmdSettings.id, pagerduty.GetUserOptions{})
+			if err != nil {
+				return err
+			}
 		}
 
-		start, err := cmd.Flags().GetString("from")
-		if err != nil {
-			return err
-		}
-		end, err := cmd.Flags().GetString("to")
-		if err != nil {
-			return err
-		}
-		startTime, err := time.Parse("2006-01-02T15:04:05Z", start)
-		if err != nil {
-			return err
-		}
-		endTime, err := time.Parse("2006-01-02T15:04:05Z", end)
-		if err != nil {
-			return err
-		}
+		startTime := mustParsePagerDutyRFC3339ishTime(listAlertsCmdSettings.from)
+		endTime := mustParsePagerDutyRFC3339ishTime(listAlertsCmdSettings.to)
 
 		useLogEntryMethod := true
 		var ocs *pagerduty.ListOnCallsResponse
 		if endTime.Sub(startTime).Hours() > 16 {
 			useLogEntryMethod = false
-			ocs, err = pd.GetAllOnCalls(client, user, start, end)
+			ocs, err = pd.GetAllOnCalls(client, user, listAlertsCmdSettings.from, listAlertsCmdSettings.to)
 		}
 
 		offset := 0
@@ -94,8 +84,8 @@ var listAlertsCmd = &cobra.Command{
 					Limit:  uint(limit),
 					Offset: uint(offset),
 				},
-				Since:   start,
-				Until:   end,
+				Since:   listAlertsCmdSettings.from,
+				Until:   listAlertsCmdSettings.to,
 				TeamIDs: teamIDs,
 			}
 			a, err := client.ListIncidents(listIncidentsOptions)
@@ -120,15 +110,9 @@ var listAlertsCmd = &cobra.Command{
 
 				bunt.Printf("   *Link:* %s\n", incident.Self)
 
-				start, err := time.Parse("2006-01-02T15:04:05Z", incident.CreatedAt)
-				if err != nil {
-					return err
-				}
+				start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
 
-				end, err := time.Parse("2006-01-02T15:04:05Z", incident.LastStatusChangeAt)
-				if err != nil {
-					return err
-				}
+				end := mustParsePagerDutyRFC3339ishTime(incident.LastStatusChangeAt)
 
 				bunt.Printf("   *Time:* %s - %s (%s)\n",
 					start.Local().Format("2006-01-02 15:04:05"),
@@ -208,25 +192,18 @@ func filterIncidentsByTeamNameAndTime(incidents []pagerduty.Incident, oncalls []
 }
 
 func inTimeSpan(s, e, check string) (bool, error) {
-	start, err := time.Parse("2006-01-02T15:04:05Z", s)
-	if err != nil {
-		return false, err
-	}
-	end, err := time.Parse("2006-01-02T15:04:05Z", e)
-	if err != nil {
-		return false, err
-	}
-	time, err := time.Parse("2006-01-02T15:04:05Z", check)
-	if err != nil {
-		return false, err
-	}
+
+	start := mustParsePagerDutyRFC3339ishTime(s)
+	end := mustParsePagerDutyRFC3339ishTime(e)
+	time := mustParsePagerDutyRFC3339ishTime(check)
+
 	if start.Before(end) {
 		return !time.Before(start) && !time.After(end), nil
 	}
 	if start.Equal(end) {
 		return time.Equal(start), nil
 	}
-	return !start.After(time) || !end.Before(time), nil
+	return !start.After(time) || !end.Before(time), nil // start and end are on different days
 }
 
 func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
@@ -254,9 +231,18 @@ func listTeamIDs(user pagerduty.User) []string {
 	return result
 }
 
+func mustParsePagerDutyRFC3339ishTime(input string) time.Time {
+	time, err := time.Parse("2006-01-02T15:04:05Z", input)
+	if err != nil {
+		panic(err)
+	}
+	return time
+}
+
 func init() {
 	rootCmd.AddCommand(listAlertsCmd)
-	listAlertsCmd.Flags().String("id", "", "use custom ID")
-	listAlertsCmd.Flags().String("from", "", "set startpoint of custom time period")
-	listAlertsCmd.Flags().String("to", "", "set endpoint of custom time period")
+
+	listAlertsCmd.Flags().StringVar(&listAlertsCmdSettings.id, "id", "", "use custom ID")
+	listAlertsCmd.Flags().StringVar(&listAlertsCmdSettings.from, "from", "", "set startpoint of custom time period")
+	listAlertsCmd.Flags().StringVar(&listAlertsCmdSettings.to, "to", "", "set endpoint of custom time period")
 }
