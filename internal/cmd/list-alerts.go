@@ -22,6 +22,7 @@ package cmd
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
@@ -62,16 +63,6 @@ var listAlertsCmd = &cobra.Command{
 			}
 		}
 
-		startTime := mustParsePagerDutyRFC3339ishTime(listAlertsCmdSettings.from)
-		endTime := mustParsePagerDutyRFC3339ishTime(listAlertsCmdSettings.to)
-
-		useLogEntryMethod := true
-		var ocs *pagerduty.ListOnCallsResponse
-		if endTime.Sub(startTime).Hours() > 16 {
-			useLogEntryMethod = false
-			ocs, err = pd.GetAllOnCalls(client, user, listAlertsCmdSettings.from, listAlertsCmdSettings.to)
-		}
-
 		offset := 0
 		limit := 100
 		numPrintedIncidents := 0
@@ -94,11 +85,7 @@ var listAlertsCmd = &cobra.Command{
 				return err
 			}
 
-			if useLogEntryMethod {
-				incidents, err = filterIncidentsByNameInLogEntries(incidents, user.Name, client)
-			} else {
-				incidents, err = filterIncidentsByTeamNameAndTime(incidents, ocs.OnCalls)
-			}
+			incidents, err = filterIncidentsByNameInLogEntries(incidents, user.Name, client)
 
 			for _, incident := range incidents {
 				bunt.Printf("\n%d. *%s*\n", numPrintedIncidents+1, incident.Title)
@@ -108,7 +95,7 @@ var listAlertsCmd = &cobra.Command{
 					bunt.Printf("   %s\n", incident.Description)
 				}
 
-				bunt.Printf("   *Link:* %s\n", incident.Self)
+				bunt.Printf("   *Link:* %s\n", strings.Replace(incident.Self, "api", "ibm", 1))
 
 				start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
 
@@ -172,48 +159,43 @@ func formatNoteTime(input string) string {
 	return time.Local().Format("2006-01-02 15:04:05")
 }
 
-func filterIncidentsByTeamNameAndTime(incidents []pagerduty.Incident, oncalls []pagerduty.OnCall) ([]pagerduty.Incident, error) {
-	var filteredIncidents []pagerduty.Incident
-	for _, incident := range incidents {
-		for _, team := range incident.Teams {
-			for _, oncall := range oncalls {
-				isInTimeSpan, err := inTimeSpan(oncall.Start, oncall.End, incident.CreatedAt)
-				if err != nil {
-					return filteredIncidents, err
-				}
-				if isInTimeSpan && strings.Contains(oncall.Schedule.Summary, team.Summary) {
-					filteredIncidents = append(filteredIncidents, incident)
-					break
-				}
-			}
-		}
-	}
-	return filteredIncidents, nil
-}
-
-func inTimeSpan(s, e, check string) (bool, error) {
-
-	start := mustParsePagerDutyRFC3339ishTime(s)
-	end := mustParsePagerDutyRFC3339ishTime(e)
-	time := mustParsePagerDutyRFC3339ishTime(check)
-
-	if start.Before(end) {
-		return !time.Before(start) && !time.After(end), nil
-	}
-	if start.Equal(end) {
-		return time.Equal(start), nil
-	}
-	return !start.After(time) || !end.Before(time), nil // start and end are on different days
-}
-
 func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
+	numIncidents := len(incidents)
 	var filteredIncidents []pagerduty.Incident
-	for _, incident := range incidents {
-		incLogEntries, err := client.ListIncidentLogEntries(incident.Id, pagerduty.ListIncidentLogEntriesOptions{})
-		if err != nil {
-			return nil, err
+	logEntries := make([]pagerduty.ListIncidentLogEntriesResponse, numIncidents, numIncidents)
+
+	loadLogEntries := func(position int, wg *sync.WaitGroup) {
+		logEntry, _ := client.ListIncidentLogEntries(incidents[position].Id, pagerduty.ListIncidentLogEntriesOptions{})
+		logEntries[position] = *logEntry
+		wg.Done()
+	}
+	var wg *sync.WaitGroup
+	if numIncidents <= 50 { // if you sent 100 requests at once, you sometimes get an error. 50 requests at once is pretty safe.
+		wg = new(sync.WaitGroup)
+		wg.Add(numIncidents)
+
+		for i := 0; i < numIncidents; i++ {
+			go loadLogEntries(i, wg)
 		}
-		for _, logEntry := range incLogEntries.LogEntries {
+	} else {
+		wg = new(sync.WaitGroup)
+		wg.Add(int(numIncidents / 2))
+
+		for i := 0; i < int(numIncidents/2); i++ {
+			go loadLogEntries(i, wg)
+		}
+
+		wg.Wait()
+		wg.Add(int(numIncidents / 2))
+
+		for i := int(numIncidents / 2); i < numIncidents; i++ {
+			go loadLogEntries(i, wg)
+		}
+	}
+	wg.Wait()
+
+	for i, incident := range incidents {
+		for _, logEntry := range logEntries[i].LogEntries {
 			if strings.Contains(logEntry.CommonLogEntryField.Summary, username) {
 				filteredIncidents = append(filteredIncidents, incident)
 				break
