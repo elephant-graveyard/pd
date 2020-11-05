@@ -27,6 +27,7 @@ import (
 
 	"github.com/PagerDuty/go-pagerduty"
 	"github.com/gonvenience/bunt"
+	"github.com/gonvenience/wrap"
 	"github.com/homeport/pd/internal/pd"
 	"github.com/spf13/cobra"
 )
@@ -95,7 +96,7 @@ var listAlertsCmd = &cobra.Command{
 					bunt.Printf("   %s\n", incident.Description)
 				}
 
-				bunt.Printf("   *Link:* %s\n", strings.Replace(incident.Self, "api", "ibm", 1))
+				bunt.Printf("   *Link:* CornflowerBlue{~%s~}\n", incident.Self)
 
 				start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
 
@@ -160,40 +161,43 @@ func formatNoteTime(input string) string {
 }
 
 func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
-	numIncidents := len(incidents)
-	var filteredIncidents []pagerduty.Incident
-	logEntries := make([]pagerduty.ListIncidentLogEntriesResponse, numIncidents, numIncidents)
+	const parallel = 10
 
-	loadLogEntries := func(position int, wg *sync.WaitGroup) {
-		logEntry, _ := client.ListIncidentLogEntries(incidents[position].Id, pagerduty.ListIncidentLogEntriesOptions{})
-		logEntries[position] = *logEntry
-		wg.Done()
+	type in struct {
+		index    int
+		incident pagerduty.Incident
 	}
-	var wg *sync.WaitGroup
-	if numIncidents <= 50 { // if you sent 100 requests at once, you sometimes get an error. 50 requests at once is pretty safe.
-		wg = new(sync.WaitGroup)
-		wg.Add(numIncidents)
 
-		for i := 0; i < numIncidents; i++ {
-			go loadLogEntries(i, wg)
-		}
-	} else {
-		wg = new(sync.WaitGroup)
-		wg.Add(int(numIncidents / 2))
+	var (
+		errors     = []error{}
+		tasks      = make(chan in, len(incidents))
+		logEntries = make([]pagerduty.ListIncidentLogEntriesResponse, len(incidents))
+	)
 
-		for i := 0; i < int(numIncidents/2); i++ {
-			go loadLogEntries(i, wg)
-		}
-
-		wg.Wait()
-		wg.Add(int(numIncidents / 2))
-
-		for i := int(numIncidents / 2); i < numIncidents; i++ {
-			go loadLogEntries(i, wg)
-		}
+	// Fill the task channel with work to be done
+	for idx, incident := range incidents {
+		tasks <- in{idx, incident}
 	}
+
+	// Start a worker group to process work tasks
+	var wg sync.WaitGroup
+	wg.Add(parallel)
+	for i := 0; i < parallel; i++ {
+		go func() {
+			defer wg.Done()
+			for task := range tasks {
+				resp, err := client.ListIncidentLogEntries(task.incident.Id, pagerduty.ListIncidentLogEntriesOptions{})
+				if err != nil {
+					errors = append(errors, err)
+				}
+				logEntries[task.index] = *resp
+			}
+		}()
+	}
+	close(tasks)
 	wg.Wait()
 
+	var filteredIncidents []pagerduty.Incident
 	for i, incident := range incidents {
 		for _, logEntry := range logEntries[i].LogEntries {
 			if strings.Contains(logEntry.CommonLogEntryField.Summary, username) {
@@ -202,7 +206,11 @@ func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username 
 			}
 		}
 	}
+	if len(errors) > 0 {
+		return filteredIncidents, wrap.Errors(errors, "failed to filter incidents by name")
+	}
 	return filteredIncidents, nil
+
 }
 
 func listTeamIDs(user pagerduty.User) []string {
@@ -214,7 +222,7 @@ func listTeamIDs(user pagerduty.User) []string {
 }
 
 func mustParsePagerDutyRFC3339ishTime(input string) time.Time {
-	time, err := time.Parse("2006-01-02T15:04:05Z", input)
+	time, err := time.Parse(time.RFC3339, input)
 	if err != nil {
 		panic(err)
 	}
