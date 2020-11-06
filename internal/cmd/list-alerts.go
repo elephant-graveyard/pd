@@ -68,9 +68,11 @@ var listAlertsCmd = &cobra.Command{
 		limit := 100
 		numPrintedIncidents := 0
 		teamIDs := listTeamIDs(*user)
-		moreIncidents := true
+		moreIncidents := len(teamIDs) > 0
+		if !moreIncidents {
+			bunt.Printf("\nThis PagerDuty-account is Red{not} part of any teams. To use this function, the PagerDuty-account must be part of *at least one team*.\n")
+		}
 		for moreIncidents {
-
 			listIncidentsOptions := pagerduty.ListIncidentsOptions{
 				APIListObject: pagerduty.APIListObject{
 					Limit:  uint(limit),
@@ -89,14 +91,17 @@ var listAlertsCmd = &cobra.Command{
 			incidents, err = filterIncidentsByNameInLogEntries(incidents, user.Name, client)
 
 			for _, incident := range incidents {
+
 				bunt.Printf("\n%d. *%s*\n", numPrintedIncidents+1, incident.Title)
 
 				if incident.Description != incident.Title {
 					bunt.Printf("   *Description:* \n")
-					bunt.Printf("   %s\n", incident.Description)
+					for _, line := range strings.Split(incident.Description, "\n") {
+						bunt.Printf("      %s\n", line)
+					}
 				}
 
-				bunt.Printf("   *Link:* CornflowerBlue{~%s~}\n", incident.Self)
+				bunt.Printf("   *Link:* CornflowerBlue{~%s~}\n", incident.HTMLURL)
 
 				start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
 
@@ -115,12 +120,11 @@ var listAlertsCmd = &cobra.Command{
 				if len(notes) > 0 {
 					bunt.Printf("   *Notes:*\n")
 					for j := len(notes) - 1; j >= 0; j-- {
-						bunt.Printf("      %d. %s (by _%s_ at _%s_)\n",
-							len(notes)-j,
-							notes[j].Content,
-							lookUpNameByUserID(client, notes[j].User.ID),
-							formatNoteTime(notes[j].CreatedAt),
-						)
+						bunt.Printf("      %d. ", len(notes)-j)
+						for _, line := range strings.Split(notes[j].Content, "\n") {
+							bunt.Printf("%s\n         ", line)
+						}
+						bunt.Printf("(by _%s_ at _%s_)\n", lookUpNameByUserID(client, notes[j].User.ID), formatNoteTime(notes[j].CreatedAt))
 					}
 				}
 
