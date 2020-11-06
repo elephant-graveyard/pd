@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/PagerDuty/go-pagerduty"
 	"github.com/gonvenience/bunt"
 	"github.com/gonvenience/neat"
 	"github.com/homeport/pd/internal/pd"
@@ -42,7 +43,12 @@ var onCallCmd = &cobra.Command{
 			return err
 		}
 
-		oncalls, err := pd.GetPagerDutyOnCalls(client)
+		user, err := client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
+		if err != nil {
+			return err
+		}
+
+		oncalls, err := pd.GetPagerDutyOnCalls(client, user)
 		if err != nil {
 			neat.Box(
 				os.Stderr,
