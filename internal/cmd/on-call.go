@@ -28,6 +28,7 @@ import (
 	"github.com/PagerDuty/go-pagerduty"
 	"github.com/gonvenience/bunt"
 	"github.com/gonvenience/neat"
+	"github.com/gonvenience/wrap"
 	"github.com/homeport/pd/internal/pd"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ var onCallCmd = &cobra.Command{
 
 		user, err := client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
 		if err != nil {
-			return err
+			return wrap.Error(err, "It seems like the authtoken is not set correctly or outdated. Please update the authtoken in the .pd.yml file. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
 		}
 
 		oncalls, err := pd.GetPagerDutyOnCalls(client, user)

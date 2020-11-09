@@ -29,14 +29,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const cmdName string = "set-region"
+const cmdName string = "set-own-shift"
 
 // setRegionCmd represents the get command
 var setRegionCmd = &cobra.Command{
 	Use:   cmdName,
 	Args:  cobra.MaximumNArgs(1),
-	Short: "Sets own region",
-	Long:  `Sets the region you live in`,
+	Short: "Sets own shift in .pd.yml file",
+	Long:  `Sets own shift in .pd.yml file depending on the argument/your time zone.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		shifts, _, err := pd.LoadShifts()
@@ -54,7 +54,7 @@ var setRegionCmd = &cobra.Command{
 				return err
 			}
 			bunt.Printf("\nYou've been added to SkyBlue{%s} because of your timezone.\n", ownShift.Name)
-			bunt.Printf("If this is not the right region, please run the 'LightSlateGray{%s}' command followed by your region name.\n\n", cmdName)
+			bunt.Printf("If this is not the right shift, please run the 'LightSlateGray{%s}' command followed by your shift name.\n\n", cmdName)
 		} else {
 			pos := -1
 			for i, shift := range shifts {
