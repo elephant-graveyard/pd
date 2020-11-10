@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
+	"github.com/gonvenience/wrap"
 	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 )
@@ -105,7 +106,7 @@ func loadConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
+		return nil, wrap.Error(err, "it seems like the content of the .pd.yml file could not be interpreted. Please follow these instructions to set up the file correctly: https://github.com/homeport/pd/blob/main/README.md")
 	}
 
 	return &config, nil
@@ -119,7 +120,7 @@ func getDataFromYAMLFile() ([]byte, error) {
 
 	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
 	if err != nil {
-		return nil, err
+		return nil, wrap.Error(err, "it seems like the .pd.yml is not created or could not be read. Please follow these instructions to set up the file correctly: https://github.com/homeport/pd/blob/main/README.md")
 	}
 	return data, nil
 }

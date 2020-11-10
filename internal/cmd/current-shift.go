@@ -31,12 +31,16 @@ var currentShiftCmd = &cobra.Command{
 	Use:   "current-shift",
 	Args:  cobra.ExactArgs(0),
 	Short: "Display current shift",
-	Long:  `Displays the region of the current shift`,
+	Long:  `Displays the currently active shift`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		shifts, shiftPos, ownShiftPos, err := pd.GetCurrentAndOwnShift()
-		if err != nil || shiftPos == -1 {
+		if err != nil {
 			return err
+		}
+		if len(shifts) == 0 || shiftPos == -1 {
+			bunt.Printf("\nThe shifts in the .pd.yml file are *not or wrongly configured*. Please configure them correctly to use this command.\n\n")
+			return nil
 		}
 		bunt.Printf("\nAt the moment, SkyBlue{%s} is in charge.\n", shifts[shiftPos].Name)
 
@@ -49,7 +53,7 @@ var currentShiftCmd = &cobra.Command{
 		bunt.Printf("The next shift will be SkyBlue{%s} in %d:%02d hours\n", nextShift.Name, timeUntilNextShift/60, timeUntilNextShift%60)
 
 		if ownShiftPos == -1 {
-			bunt.Printf("\nYour region has not been set yet. In case you want to set it in the configuration, please run the 'LightSlateGray{pd %s [region-name]}'\n\n", cmdName)
+			bunt.Printf("\nYour region has not been set yet. In case you want to set it in the configuration, please run 'LightSlateGray{pd %s [region-name]}'\n\n", cmdName)
 			return nil
 		}
 
