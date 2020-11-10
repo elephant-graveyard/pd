@@ -46,7 +46,7 @@ Displays all current on calls.
 
 ### pd current-shift
 
-Displays which shift ist currently on-call (if shifts are configured in the `.pd.yml` file).
+Displays which shift is currently on-call (if shifts are configured in the `.pd.yml` file).
 
 ### pd set-own-shift [shift-name]
 
@@ -64,6 +64,6 @@ Flag | Description
 
 `user-ID` is a 7 character long ID found on `PagerDuty`.
 
-`time` has to be provided using the format `RFC3339`(2006-01-02T15:04:05Z07:00)
+`time` has to be provided using the format `RFC3339` (`2006-01-02T15:04:05Z07:00`)
 
 If `--from` and `--to` are both not used, all non-resolved issues for the user are displayed.

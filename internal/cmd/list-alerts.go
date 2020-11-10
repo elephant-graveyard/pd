@@ -55,12 +55,12 @@ var listAlertsCmd = &cobra.Command{
 		if listAlertsCmdSettings.id == "" {
 			user, err = client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
 			if err != nil {
-				return wrap.Error(err, "It seems like the authtoken is not set correctly or outdated. Please update the authtoken in the .pd.yml file. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
+				return wrap.Error(err, "it seems like the authtoken is not set correctly or outdated. Please update the authtoken in the .pd.yml file. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
 			}
 		} else {
 			user, err = client.GetUser(listAlertsCmdSettings.id, pagerduty.GetUserOptions{})
 			if err != nil {
-				return wrap.Error(err, "It seems like the authtoken is not set correctly/outdated or the user-ID is invalid. Please update the authtoken in the .pd.yml file or use another user-ID. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
+				return wrap.Error(err, "it seems like the authtoken is not set correctly/outdated or the user-ID is invalid. Please update the authtoken in the .pd.yml file or use another user-ID. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
 			}
 		}
 
