@@ -97,6 +97,15 @@ func GetAllOnCalls(client *pagerduty.Client, user *pagerduty.User, start string,
 	return client.ListOnCalls(listOptions)
 }
 
+// GetTemplate returns the requested template
+func GetTemplate(templateName string) (string, error) {
+	config, err := loadConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.Templates[templateName], err
+}
+
 func loadConfig() (*Config, error) {
 
 	data, err := getDataFromYAMLFile()

@@ -40,6 +40,8 @@ type Config struct {
 		Start string `yaml:"start"`
 		End   string `yaml:"end"`
 	} `yaml:"shift-times"`
+
+	Templates map[string]string `yaml:"templates"`
 }
 
 // ChangeYAMLFile changes a specific value in the .pd.yml file
