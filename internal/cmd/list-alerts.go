@@ -22,12 +22,10 @@ package cmd
 
 import (
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
 	"github.com/gonvenience/bunt"
-	"github.com/gonvenience/wrap"
 	"github.com/homeport/pd/internal/pd"
 	"github.com/spf13/cobra"
 )
@@ -51,93 +49,47 @@ var listAlertsCmd = &cobra.Command{
 			return err
 		}
 
-		var user *pagerduty.User
-		if listAlertsCmdSettings.id == "" {
-			user, err = client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
-			if err != nil {
-				return wrap.Error(err, "it seems like the authtoken is not set correctly or outdated. Please update the authtoken in the .pd.yml file. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
-			}
-		} else {
-			user, err = client.GetUser(listAlertsCmdSettings.id, pagerduty.GetUserOptions{})
-			if err != nil {
-				return wrap.Error(err, "it seems like the authtoken is not set correctly/outdated or the user-ID is invalid. Please update the authtoken in the .pd.yml file or use another user-ID. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
-			}
+		incidents, _, err := getRelevantIncidents(listAlertsCmdSettings.id, listAlertsCmdSettings.from, listAlertsCmdSettings.to)
+		if err != nil {
+			return err
 		}
 
-		offset := 0
-		limit := 100
-		numPrintedIncidents := 0
-		teamIDs := listTeamIDs(*user)
-		moreIncidents := len(teamIDs) > 0
-		if !moreIncidents {
-			bunt.Printf("\nThis PagerDuty-account is Red{not} part of any teams. To use this function, the PagerDuty-account must be part of *at least one team*.\n")
-		}
-		for moreIncidents {
-			listIncidentsOptions := pagerduty.ListIncidentsOptions{
-				APIListObject: pagerduty.APIListObject{
-					Limit:  uint(limit),
-					Offset: uint(offset),
-				},
-				Since:   listAlertsCmdSettings.from,
-				Until:   listAlertsCmdSettings.to,
-				TeamIDs: teamIDs,
+		for i, incident := range incidents {
+
+			bunt.Printf("\n%d. *%s*\n", i+1, incident.Title)
+
+			if incident.Description != incident.Title {
+				bunt.Printf("   *Description:* \n")
+				for _, line := range strings.Split(incident.Description, "\n") {
+					bunt.Printf("      %s\n", line)
+				}
 			}
-			a, err := client.ListIncidents(listIncidentsOptions)
-			incidents := a.Incidents
+
+			bunt.Printf("   *Link:* CornflowerBlue{~%s~}\n", incident.HTMLURL)
+
+			start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
+
+			end := mustParsePagerDutyRFC3339ishTime(incident.LastStatusChangeAt)
+
+			bunt.Printf("   *Time:* %s - %s (%s)\n",
+				start.Local().Format("2006-01-02 15:04:05"),
+				end.Local().Format("2006-01-02 15:04:05"),
+				end.Sub(start),
+			)
+
+			notes, err := client.ListIncidentNotes(incident.Id)
 			if err != nil {
 				return err
 			}
-
-			incidents, err = filterIncidentsByNameInLogEntries(incidents, user.Name, client)
-
-			for _, incident := range incidents {
-
-				bunt.Printf("\n%d. *%s*\n", numPrintedIncidents+1, incident.Title)
-
-				if incident.Description != incident.Title {
-					bunt.Printf("   *Description:* \n")
-					for _, line := range strings.Split(incident.Description, "\n") {
-						bunt.Printf("      %s\n", line)
+			if len(notes) > 0 {
+				bunt.Printf("   *Notes:*\n")
+				for j := len(notes) - 1; j >= 0; j-- {
+					bunt.Printf("      %d. ", len(notes)-j)
+					for _, line := range strings.Split(notes[j].Content, "\n") {
+						bunt.Printf("%s\n         ", line)
 					}
+					bunt.Printf("(by _%s_ at _%s_)\n", lookUpNameByUserID(client, notes[j].User.ID), formatNoteTime(notes[j].CreatedAt))
 				}
-
-				bunt.Printf("   *Link:* CornflowerBlue{~%s~}\n", incident.HTMLURL)
-
-				start := mustParsePagerDutyRFC3339ishTime(incident.CreatedAt)
-
-				end := mustParsePagerDutyRFC3339ishTime(incident.LastStatusChangeAt)
-
-				bunt.Printf("   *Time:* %s - %s (%s)\n",
-					start.Local().Format("2006-01-02 15:04:05"),
-					end.Local().Format("2006-01-02 15:04:05"),
-					end.Sub(start),
-				)
-
-				notes, err := client.ListIncidentNotes(incident.Id)
-				if err != nil {
-					return err
-				}
-				if len(notes) > 0 {
-					bunt.Printf("   *Notes:*\n")
-					for j := len(notes) - 1; j >= 0; j-- {
-						bunt.Printf("      %d. ", len(notes)-j)
-						for _, line := range strings.Split(notes[j].Content, "\n") {
-							bunt.Printf("%s\n         ", line)
-						}
-						bunt.Printf("(by _%s_ at _%s_)\n", lookUpNameByUserID(client, notes[j].User.ID), formatNoteTime(notes[j].CreatedAt))
-					}
-				}
-
-				numPrintedIncidents++
-			}
-			if err != nil {
-				return err
-			}
-
-			if a.More {
-				offset += limit
-			} else {
-				moreIncidents = false
 			}
 		}
 
@@ -162,67 +114,6 @@ func formatNoteTime(input string) string {
 	}
 
 	return time.Local().Format("2006-01-02 15:04:05")
-}
-
-func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
-	const parallel = 10
-
-	type in struct {
-		index    int
-		incident pagerduty.Incident
-	}
-
-	var (
-		errors     = []error{}
-		tasks      = make(chan in, len(incidents))
-		logEntries = make([]pagerduty.ListIncidentLogEntriesResponse, len(incidents))
-	)
-
-	// Fill the task channel with work to be done
-	for idx, incident := range incidents {
-		tasks <- in{idx, incident}
-	}
-
-	// Start a worker group to process work tasks
-	var wg sync.WaitGroup
-	wg.Add(parallel)
-	for i := 0; i < parallel; i++ {
-		go func() {
-			defer wg.Done()
-			for task := range tasks {
-				resp, err := client.ListIncidentLogEntries(task.incident.Id, pagerduty.ListIncidentLogEntriesOptions{})
-				if err != nil {
-					errors = append(errors, err)
-				}
-				logEntries[task.index] = *resp
-			}
-		}()
-	}
-	close(tasks)
-	wg.Wait()
-
-	var filteredIncidents []pagerduty.Incident
-	for i, incident := range incidents {
-		for _, logEntry := range logEntries[i].LogEntries {
-			if strings.Contains(logEntry.CommonLogEntryField.Summary, username) {
-				filteredIncidents = append(filteredIncidents, incident)
-				break
-			}
-		}
-	}
-	if len(errors) > 0 {
-		return filteredIncidents, wrap.Errors(errors, "failed to filter incidents by name")
-	}
-	return filteredIncidents, nil
-
-}
-
-func listTeamIDs(user pagerduty.User) []string {
-	result := make([]string, len(user.Teams))
-	for i, team := range user.Teams {
-		result[i] = team.ID
-	}
-	return result
 }
 
 func mustParsePagerDutyRFC3339ishTime(input string) time.Time {
