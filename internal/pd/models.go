@@ -58,7 +58,10 @@ func ChangeYAMLFile(name string, newValue string) error {
 	}
 
 	config := make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &config)
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return err
+	}
+
 	config[name] = newValue
 
 	d, err := yaml.Marshal(&config)
