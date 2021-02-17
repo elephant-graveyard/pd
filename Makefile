@@ -29,17 +29,12 @@ all: clean verify build
 .PHONY: clean
 clean:
 	@GO111MODULE=on go clean -cache $(shell go list ./...)
-	@rm -rf binaries
+	@rm -rf dist
 
 .PHONY: verify
 verify:
 	@GO111MODULE=on go mod download
 	@GO111MODULE=on go mod verify
-
-.PHONY: build
-build: binaries/pd-linux-amd64 binaries/pd-darwin-amd64
-	@/bin/sh -c "echo '\n\033[1mSHA sum of compiled binaries:\033[0m'"
-	@shasum -a256 binaries/pd-linux-amd64 binaries/pd-darwin-amd64
 
 .PHONY: install
 install:
@@ -47,18 +42,4 @@ install:
 		-tags netgo \
 		-ldflags='-s -w -extldflags "-static" -X github.com/homeport/yft/internal/cmd.version=$(version)' \
 		-o /usr/local/bin/pd \
-		cmd/pd/main.go
-
-binaries/pd-linux-amd64: $(sources)
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-		-tags netgo \
-		-ldflags='-s -w -extldflags "-static" -X github.com/homeport/yft/internal/cmd.version=$(version)' \
-		-o binaries/pd-linux-amd64 \
-		cmd/pd/main.go
-
-binaries/pd-darwin-amd64: $(sources)
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build \
-		-tags netgo \
-		-ldflags='-s -w -extldflags "-static" -X github.com/homeport/yft/internal/cmd.version=$(version)' \
-		-o binaries/pd-darwin-amd64 \
 		cmd/pd/main.go
