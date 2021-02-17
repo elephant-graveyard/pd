@@ -124,7 +124,7 @@ func getCategoryMatchingIncidents(name string, incidents []pagerduty.Incident) r
 			otherIncidents = append(otherIncidents, incident)
 		}
 	}
-	incidents = otherIncidents
+
 	return relevantIncidentsReturn{Title: name, RelevantIncidents: relevantIncidents, OtherIncidents: otherIncidents}
 }
 
