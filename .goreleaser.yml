@@ -54,4 +54,4 @@ brews:
     license: "MIT"
     skip_upload: false
     test: |
-      system "#{bin}/pd --version"
+      system "#{bin}/pd version"
