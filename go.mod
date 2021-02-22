@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/PagerDuty/go-pagerduty v1.3.0
-	github.com/gonvenience/bunt v1.3.0
+	github.com/gonvenience/bunt v1.3.1
 	github.com/gonvenience/neat v1.3.5
 	github.com/gonvenience/wrap v1.1.0
 	github.com/mitchellh/go-homedir v1.1.0
