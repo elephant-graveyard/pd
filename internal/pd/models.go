@@ -22,9 +22,9 @@ package pd
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
-	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,7 +47,7 @@ type Config struct {
 // ChangeYAMLFile changes a specific value in the .pd.yml file
 func ChangeYAMLFile(name string, newValue string) error {
 
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}

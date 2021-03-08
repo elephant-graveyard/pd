@@ -22,12 +22,12 @@ package pd
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
 	"github.com/gonvenience/wrap"
-	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 )
 
@@ -122,7 +122,7 @@ func loadConfig() (*Config, error) {
 }
 
 func getDataFromYAMLFile() ([]byte, error) {
-	home, err := homedir.Dir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
