@@ -6,6 +6,7 @@ builds:
     - linux
     - darwin
     goarch:
+    - arm64
     - amd64
     main: ./cmd/pd/main.go
     flags:
