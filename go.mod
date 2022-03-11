@@ -3,7 +3,7 @@ module github.com/homeport/pd
 go 1.17
 
 require (
-	github.com/PagerDuty/go-pagerduty v1.4.3
+	github.com/PagerDuty/go-pagerduty v1.5.0
 	github.com/gonvenience/bunt v1.3.3
 	github.com/gonvenience/neat v1.3.9
 	github.com/gonvenience/wrap v1.1.1
