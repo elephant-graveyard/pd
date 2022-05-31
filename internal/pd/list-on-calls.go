@@ -21,6 +21,7 @@
 package pd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -49,8 +50,8 @@ func CreatePagerDutyClient() (*pagerduty.Client, error) {
 }
 
 // GetPagerDutyOnCalls returns all currently active on-calls for the user
-func GetPagerDutyOnCalls(client *pagerduty.Client, user *pagerduty.User) (map[TimeRange]map[string]pagerduty.EscalationPolicy, error) {
-	list, err := GetAllOnCalls(client, user, "", "")
+func GetPagerDutyOnCalls(ctx context.Context, client *pagerduty.Client, user *pagerduty.User) (map[TimeRange]map[string]pagerduty.EscalationPolicy, error) {
+	list, err := GetAllOnCalls(ctx, client, user, "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +84,9 @@ func GetPagerDutyOnCalls(client *pagerduty.Client, user *pagerduty.User) (map[Ti
 
 // GetAllOnCalls returns all on calls for a specified user in a specified time range
 // If time range is not specified, only currently active on-calls will be returned
-func GetAllOnCalls(client *pagerduty.Client, user *pagerduty.User, start string, end string) (*pagerduty.ListOnCallsResponse, error) {
-	return client.ListOnCalls(
+func GetAllOnCalls(ctx context.Context, client *pagerduty.Client, user *pagerduty.User, start string, end string) (*pagerduty.ListOnCallsResponse, error) {
+	return client.ListOnCallsWithContext(
+		ctx,
 		pagerduty.ListOnCallOptions{
 			Limit:    100,
 			UserIDs:  []string{user.ID},

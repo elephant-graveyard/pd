@@ -21,6 +21,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -30,7 +31,7 @@ import (
 	"github.com/homeport/pd/internal/pd"
 )
 
-func getRelevantIncidents(userID string, from string, to string) ([]pagerduty.Incident, string, error) {
+func getRelevantIncidents(ctx context.Context, userID string, from string, to string) ([]pagerduty.Incident, string, error) {
 	client, err := pd.CreatePagerDutyClient()
 	if err != nil {
 		return nil, "", err
@@ -38,12 +39,12 @@ func getRelevantIncidents(userID string, from string, to string) ([]pagerduty.In
 
 	var user *pagerduty.User
 	if userID == "" {
-		user, err = client.GetCurrentUser(pagerduty.GetCurrentUserOptions{})
+		user, err = client.GetCurrentUserWithContext(ctx, pagerduty.GetCurrentUserOptions{})
 		if err != nil {
 			return nil, user.Name, wrap.Error(err, "it seems like the authtoken is not set correctly or outdated. Please update the authtoken in the .pd.yml file. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
 		}
 	} else {
-		user, err = client.GetUser(userID, pagerduty.GetUserOptions{})
+		user, err = client.GetUserWithContext(ctx, userID, pagerduty.GetUserOptions{})
 		if err != nil {
 			return nil, user.Name, wrap.Error(err, "it seems like the authtoken is not set correctly/outdated or the user-ID is invalid. Please update the authtoken in the .pd.yml file or use another user-ID. If you don't know how to create your authtoken, this might help:\n https://support.pagerduty.com/docs/generating-api-keys#generating-a-personal-rest-api-key\n")
 		}
@@ -65,11 +66,11 @@ func getRelevantIncidents(userID string, from string, to string) ([]pagerduty.In
 			Until:   to,
 			TeamIDs: teamIDs,
 		}
-		a, err := client.ListIncidents(listIncidentsOptions)
+		a, err := client.ListIncidentsWithContext(ctx, listIncidentsOptions)
 		if err != nil {
 			return incidents, user.Name, err
 		}
-		incs, err := filterIncidentsByNameInLogEntries(a.Incidents, user.Name, client)
+		incs, err := filterIncidentsByNameInLogEntries(ctx, a.Incidents, user.Name, client)
 		if err != nil {
 			return incidents, user.Name, err
 		}
@@ -85,7 +86,7 @@ func getRelevantIncidents(userID string, from string, to string) ([]pagerduty.In
 	return incidents, user.Name, nil
 }
 
-func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
+func filterIncidentsByNameInLogEntries(ctx context.Context, incidents []pagerduty.Incident, username string, client *pagerduty.Client) ([]pagerduty.Incident, error) {
 	const parallel = 10
 
 	type in struct {
@@ -111,7 +112,7 @@ func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username 
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				resp, err := client.ListIncidentLogEntries(task.incident.ID, pagerduty.ListIncidentLogEntriesOptions{})
+				resp, err := client.ListIncidentLogEntriesWithContext(ctx, task.incident.ID, pagerduty.ListIncidentLogEntriesOptions{})
 				if err != nil {
 					errors = append(errors, err)
 				}

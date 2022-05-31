@@ -21,6 +21,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -43,13 +44,18 @@ var listAlertsCmd = &cobra.Command{
 	Short: "Lists all alerts",
 	Long:  `Lists all alerts in a specified time period`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		client, err := pd.CreatePagerDutyClient()
 		if err != nil {
 			return err
 		}
 
-		incidents, _, err := getRelevantIncidents(listAlertsCmdSettings.id, listAlertsCmdSettings.from, listAlertsCmdSettings.to)
+		incidents, _, err := getRelevantIncidents(
+			cmd.Context(),
+			listAlertsCmdSettings.id,
+			listAlertsCmdSettings.from,
+			listAlertsCmdSettings.to,
+		)
+
 		if err != nil {
 			return err
 		}
@@ -77,10 +83,11 @@ var listAlertsCmd = &cobra.Command{
 				end.Sub(start),
 			)
 
-			notes, err := client.ListIncidentNotes(incident.ID)
+			notes, err := client.ListIncidentNotesWithContext(cmd.Context(), incident.ID)
 			if err != nil {
 				return err
 			}
+
 			if len(notes) > 0 {
 				bunt.Printf("   *Notes:*\n")
 				for j := len(notes) - 1; j >= 0; j-- {
@@ -88,7 +95,11 @@ var listAlertsCmd = &cobra.Command{
 					for _, line := range strings.Split(notes[j].Content, "\n") {
 						bunt.Printf("%s\n         ", line)
 					}
-					bunt.Printf("(by _%s_ at _%s_)\n", lookUpNameByUserID(client, notes[j].User.ID), formatNoteTime(notes[j].CreatedAt))
+
+					bunt.Printf("(by _%s_ at _%s_)\n",
+						lookUpNameByUserID(cmd.Context(), client, notes[j].User.ID),
+						formatNoteTime(notes[j].CreatedAt),
+					)
 				}
 			}
 		}
@@ -99,8 +110,8 @@ var listAlertsCmd = &cobra.Command{
 	},
 }
 
-func lookUpNameByUserID(client *pagerduty.Client, id string) string {
-	user, err := client.GetUser(id, pagerduty.GetUserOptions{})
+func lookUpNameByUserID(ctx context.Context, client *pagerduty.Client, id string) string {
+	user, err := client.GetUserWithContext(ctx, id, pagerduty.GetUserOptions{})
 	if err != nil {
 		return "unknown"
 	}

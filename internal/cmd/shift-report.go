@@ -50,13 +50,18 @@ var shiftReportCmd = &cobra.Command{
 	Short: "Creates shift report",
 	Long:  `Creates a shift report based on the provided template`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		if shiftReportCmdSettings.id == "" || shiftReportCmdSettings.templateName == "" || shiftReportCmdSettings.date == "" {
 			bunt.Println("\nPlease use all flags!\n")
 			return nil
 		}
 
-		incidents, username, err := getRelevantIncidents(shiftReportCmdSettings.id, shiftReportCmdSettings.date+"T00:00:01Z", shiftReportCmdSettings.date+"T23:59:59Z")
+		incidents, username, err := getRelevantIncidents(
+			cmd.Context(),
+			shiftReportCmdSettings.id,
+			shiftReportCmdSettings.date+"T00:00:01Z",
+			shiftReportCmdSettings.date+"T23:59:59Z",
+		)
+
 		if err != nil {
 			return err
 		}
