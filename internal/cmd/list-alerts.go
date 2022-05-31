@@ -77,7 +77,7 @@ var listAlertsCmd = &cobra.Command{
 				end.Sub(start),
 			)
 
-			notes, err := client.ListIncidentNotes(incident.Id)
+			notes, err := client.ListIncidentNotes(incident.ID)
 			if err != nil {
 				return err
 			}

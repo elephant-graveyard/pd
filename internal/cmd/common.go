@@ -59,10 +59,8 @@ func getRelevantIncidents(userID string, from string, to string) ([]pagerduty.In
 	}
 	for moreIncidents {
 		listIncidentsOptions := pagerduty.ListIncidentsOptions{
-			APIListObject: pagerduty.APIListObject{
-				Limit:  uint(limit),
-				Offset: uint(offset),
-			},
+			Limit:   uint(limit),
+			Offset:  uint(offset),
 			Since:   from,
 			Until:   to,
 			TeamIDs: teamIDs,
@@ -113,7 +111,7 @@ func filterIncidentsByNameInLogEntries(incidents []pagerduty.Incident, username 
 		go func() {
 			defer wg.Done()
 			for task := range tasks {
-				resp, err := client.ListIncidentLogEntries(task.incident.Id, pagerduty.ListIncidentLogEntriesOptions{})
+				resp, err := client.ListIncidentLogEntries(task.incident.ID, pagerduty.ListIncidentLogEntriesOptions{})
 				if err != nil {
 					errors = append(errors, err)
 				}

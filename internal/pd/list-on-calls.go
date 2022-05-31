@@ -50,7 +50,6 @@ func CreatePagerDutyClient() (*pagerduty.Client, error) {
 
 // GetPagerDutyOnCalls returns all currently active on-calls for the user
 func GetPagerDutyOnCalls(client *pagerduty.Client, user *pagerduty.User) (map[TimeRange]map[string]pagerduty.EscalationPolicy, error) {
-
 	list, err := GetAllOnCalls(client, user, "", "")
 	if err != nil {
 		return nil, err
@@ -85,16 +84,14 @@ func GetPagerDutyOnCalls(client *pagerduty.Client, user *pagerduty.User) (map[Ti
 // GetAllOnCalls returns all on calls for a specified user in a specified time range
 // If time range is not specified, only currently active on-calls will be returned
 func GetAllOnCalls(client *pagerduty.Client, user *pagerduty.User, start string, end string) (*pagerduty.ListOnCallsResponse, error) {
-
-	listOptions := pagerduty.ListOnCallOptions{
-		APIListObject: pagerduty.APIListObject{Limit: 100},
-		UserIDs:       []string{user.ID},
-		Since:         start,
-		Until:         end,
-		Earliest:      true,
-	}
-
-	return client.ListOnCalls(listOptions)
+	return client.ListOnCalls(
+		pagerduty.ListOnCallOptions{
+			Limit:    100,
+			UserIDs:  []string{user.ID},
+			Since:    start,
+			Until:    end,
+			Earliest: true,
+		})
 }
 
 // GetTemplate returns the requested template
