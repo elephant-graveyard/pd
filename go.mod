@@ -6,7 +6,7 @@ require (
 	github.com/PagerDuty/go-pagerduty v1.5.1
 	github.com/gonvenience/bunt v1.3.3
 	github.com/gonvenience/neat v1.3.11
-	github.com/gonvenience/wrap v1.1.1
+	github.com/gonvenience/wrap v1.1.2
 	github.com/spf13/cobra v1.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
