@@ -22,7 +22,6 @@ package pd
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -126,7 +125,7 @@ func getDataFromYAMLFile() ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
+	data, err := os.ReadFile(filepath.Join(home, ".pd.yml"))
 	if err != nil {
 		return nil, wrap.Error(err, "it seems like the .pd.yml is not created or could not be read. Please follow these instructions to set up the file correctly: https://github.com/homeport/pd/blob/main/README.md")
 	}

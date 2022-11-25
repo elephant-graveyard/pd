@@ -21,7 +21,6 @@
 package pd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -52,7 +51,7 @@ func ChangeYAMLFile(name string, newValue string) error {
 		return err
 	}
 
-	data, err := ioutil.ReadFile(filepath.Join(home, ".pd.yml"))
+	data, err := os.ReadFile(filepath.Join(home, ".pd.yml"))
 	if err != nil {
 		return err
 	}
@@ -69,7 +68,7 @@ func ChangeYAMLFile(name string, newValue string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(home, ".pd.yml"), d, 0644)
+	err = os.WriteFile(filepath.Join(home, ".pd.yml"), d, 0644)
 	if err != nil {
 		return err
 	}

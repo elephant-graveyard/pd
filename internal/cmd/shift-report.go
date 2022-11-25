@@ -99,9 +99,7 @@ var shiftReportCmd = &cobra.Command{
 		}
 
 		bunt.Println()
-		temp.Execute(os.Stdout, input)
-
-		return nil
+		return temp.Execute(os.Stdout, input)
 	},
 }
 

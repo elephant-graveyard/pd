@@ -24,22 +24,20 @@ goos := $(shell uname | tr '[:upper:]' '[:lower:]')
 goarch := $(shell uname -m | sed 's/x86_64/amd64/')
 
 .PHONY: all
-all: clean verify build
+all: clean build
 
 .PHONY: clean
 clean:
-	@GO111MODULE=on go clean -cache $(shell go list ./...)
+	go clean -cache $(shell go list ./...)
 	@rm -rf dist
 
-.PHONY: verify
-verify:
-	@GO111MODULE=on go mod download
-	@GO111MODULE=on go mod verify
+.PHONY: build
+build:
+	go build ./...
 
 .PHONY: install
 install:
-	@GO111MODULE=on CGO_ENABLED=0 GOOS=$(goos) GOARCH=$(goarch) go build \
-		-tags netgo \
+	CGO_ENABLED=0 GOOS=$(goos) GOARCH=$(goarch) go build \
 		-ldflags='-s -w -extldflags "-static" -X github.com/homeport/yft/internal/cmd.version=$(version)' \
 		-o /usr/local/bin/pd \
 		cmd/pd/main.go

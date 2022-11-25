@@ -1,4 +1,11 @@
-# pd [![License](https://img.shields.io/github/license/homeport/pd.svg)](https://github.com/homeport/pd/blob/main/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/homeport/pd)](https://goreportcard.com/report/github.com/homeport/pd) [![Go Reference](https://pkg.go.dev/badge/github.com/homeport/pd.svg)](https://pkg.go.dev/github.com/homeport/pd) [![Release](https://img.shields.io/github/release/homeport/pd.svg)](https://github.com/homeport/pd/releases/latest) ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/homeport/pd)
+# pd
+
+[![License](https://img.shields.io/github/license/homeport/pd.svg)](https://github.com/homeport/pd/blob/main/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/homeport/pd)](https://goreportcard.com/report/github.com/homeport/pd)
+[![Tests](https://github.com/homeport/pd/workflows/Tests/badge.svg)](https://github.com/homeport/pd/actions?query=workflow%3A%22Tests%22)
+[![Codecov](https://img.shields.io/codecov/c/github/homeport/pd/main.svg)](https://codecov.io/gh/homeport/pd)
+[![Go Reference](https://pkg.go.dev/badge/github.com/homeport/pd.svg)](https://pkg.go.dev/github.com/homeport/pd)
+[![Release](https://img.shields.io/github/release/homeport/pd.svg)](https://github.com/homeport/pd/releases/latest)
 
 /pe.de/ - command line tool to query PagerDuty for the current on-calls
 
